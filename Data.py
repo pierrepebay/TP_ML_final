@@ -13,7 +13,7 @@ from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 
-class data():
+class data:
     def __init__(self, xTrainPath, yTrainPath, xEvalPath, trainSize):
         self.xTrainDataframe = pd.read_csv(xTrainPath, delimiter=",")
         self.yTrainDataframe = pd.read_csv(yTrainPath, names=["y"])
@@ -52,8 +52,8 @@ class data():
         # Predict the response for test dataset
         self.yPred = model.predict(self.xTest)
     
-    def classifyRandomForest(self):
-        clf = RandomForestClassifier(random_state=0)
+    def classifyRandomForest(self, n_e, v):
+        clf = RandomForestClassifier(n_estimators = n_e, verbose=v, random_state=0)
 
         # Train Random Forest Classifer
         model = clf.fit(self.xTrain, self.yTrain)
