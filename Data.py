@@ -39,9 +39,13 @@ class data:
 
     def removeErrorLines(self):
         self.allDataFrame.dropna(inplace=True)
+        self.m, self.n = self.allDataFrame.shape
     
     def getModelAccuracy(self):
         return metrics.accuracy_score(self.yTest, self.yPred)
+
+    def getConfusionMatrix(self):
+        return metrics.confusion_matrix(self.yTest, self.yPred)
 
     def classifyAdaBoost(self,n_est):
         abc = AdaBoostClassifier(n_estimators=n_est, learning_rate=1)
@@ -78,6 +82,24 @@ class data:
 
         # Predict the response for test dataset
         self.yPred = model.predict(self.xTest)
+    
+    def computeImbalance(self):
+        self.sickData = 0
+        self.nonSickData = 0
+        s = 0
+        for i in range(self.m):
+            if self.allDataFrame.iloc[i]['y'] == 1.0:
+                s += 1
+                self.sickData += 1
+            elif self.allDataFrame.iloc[i]['y'] == 0.0:
+                s += 1
+                self.nonSickData += 1
+            else:
+                raise ValueError("value not 1 or 0")
+        self.sickData /= self.m
+        self.nonSickData /= self.m
+        return self.sickData, self.nonSickData
+        
 
     def toCsv(self):
         self.xTrainDataframe.to_csv("xTrainClean.csv",index=False)
