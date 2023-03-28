@@ -12,6 +12,7 @@ from sklearn import datasets
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
+from imblearn.over_sampling import SMOTE
 
 class data:
     def __init__(self, xTrainPath, yTrainPath, xEvalPath, trainSize):
@@ -25,6 +26,19 @@ class data:
 
         self.trainSize = trainSize
 
+        self.removeErrorLines()
+        self.setSplits()
+        self.dataAugmentation()
+    
+    def dataAugmentation(self):
+        s, ns = np.count_nonzero(self.yTrain == 1), np.count_nonzero(self.yTrain == 0)
+        print(f'{s} sick cows, {ns} non sick cows: BEFORE SMOTE')
+        imbalance = s // ns
+        self.xTrain, self.yTrain = SMOTE().fit_resample(self.xTrain, self.yTrain)
+        s, ns = np.count_nonzero(self.yTrain == 1), np.count_nonzero(self.yTrain == 0)
+        print(f'{s} sick cows, {ns} non sick cows: AFTER SMOTE')
+                
+
     def setSplits(self):
         x = self.getXTrainArray()
         y = self.getYTrainArray().astype('int')
@@ -32,7 +46,7 @@ class data:
         self.xTrain, self.xTest, self.yTrain, self.yTest = train_test_split(x, y, test_size=(1 - self.trainSize))
 
     def getXTrainArray(self):
-        return self.allDataFrame.to_numpy()[:,range(1,74)]
+        return self.allDataFrame.to_numpy()[:,range(2,74)]
     
     def getYTrainArray(self):
         return self.allDataFrame.to_numpy()[:,74]
@@ -43,6 +57,9 @@ class data:
     
     def getModelAccuracy(self):
         return metrics.accuracy_score(self.yTest, self.yPred)
+    
+    def getModelBalancedAccuracy(self):
+        return metrics.balanced_accuracy_score(self.yTest, self.yPred)
 
     def getConfusionMatrix(self):
         return metrics.confusion_matrix(self.yTest, self.yPred)
