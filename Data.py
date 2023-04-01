@@ -38,8 +38,8 @@ class data:
     def dataAugmentation(self, imbalance_ratio="auto"):
         s, ns = np.count_nonzero(self.yTrain == 1), np.count_nonzero(self.yTrain == 0)
         print(f'{s} sick cows, {ns} non sick cows: BEFORE SMOTE')
-        imbalance = s // ns
-        self.xTrain, self.yTrain = SMOTE(imbalance_ratio).fit_resample(self.xTrain, self.yTrain)
+        #imbalance = s // ns
+        self.xTrain, self.yTrain = SMOTE(sampling_strategy=imbalance_ratio).fit_resample(self.xTrain, self.yTrain)
         s, ns = np.count_nonzero(self.yTrain == 1), np.count_nonzero(self.yTrain == 0)
         print(f'{s} sick cows, {ns} non sick cows: AFTER SMOTE')
                 
