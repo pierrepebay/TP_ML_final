@@ -15,7 +15,7 @@ from sklearn import metrics
 from imblearn.over_sampling import SMOTE
 
 class data:
-    def __init__(self, xTrainPath, yTrainPath, xEvalPath, trainSize):
+    def __init__(self, xTrainPath, yTrainPath, xEvalPath, trainSize, data_augmentation=True):
         self.xTrainDataframe = pd.read_csv(xTrainPath, delimiter=",")
         self.yTrainDataframe = pd.read_csv(yTrainPath, names=["y"])
         self.xEvalDataframe = pd.read_csv(xEvalPath, delimiter=",")
@@ -28,13 +28,18 @@ class data:
 
         self.removeErrorLines()
         self.setSplits()
-        self.dataAugmentation()
+        
+        if type(data_augmentation) == bool: 
+            if data_augmentation:
+                self.dataAugmentation()
+        else:
+            self.dataAugmentation(data_augmentation)
     
-    def dataAugmentation(self):
+    def dataAugmentation(self, imbalance_ratio="auto"):
         s, ns = np.count_nonzero(self.yTrain == 1), np.count_nonzero(self.yTrain == 0)
         print(f'{s} sick cows, {ns} non sick cows: BEFORE SMOTE')
         imbalance = s // ns
-        self.xTrain, self.yTrain = SMOTE().fit_resample(self.xTrain, self.yTrain)
+        self.xTrain, self.yTrain = SMOTE(imbalance_ratio).fit_resample(self.xTrain, self.yTrain)
         s, ns = np.count_nonzero(self.yTrain == 1), np.count_nonzero(self.yTrain == 0)
         print(f'{s} sick cows, {ns} non sick cows: AFTER SMOTE')
                 
@@ -63,6 +68,9 @@ class data:
 
     def getConfusionMatrix(self):
         return metrics.confusion_matrix(self.yTest, self.yPred)
+    
+    def getF1Score(self):
+        return metrics.f1_score(self.yTest, self.yPred)
 
     def classifyAdaBoost(self,n_est):
         abc = AdaBoostClassifier(n_estimators=n_est, learning_rate=1)
@@ -73,8 +81,8 @@ class data:
         # Predict the response for test dataset
         self.yPred = model.predict(self.xTest)
     
-    def classifyRandomForest(self, n_e, v):
-        clf = RandomForestClassifier(n_estimators = n_e, verbose=v, random_state=0)
+    def classifyRandomForest(self, n_e, v, max_d=None, min_smp_splt=2):
+        clf = RandomForestClassifier(n_estimators = n_e, verbose=v, random_state=0, max_depth=max_d, min_samples_split=min_smp_splt)
 
         # Train Random Forest Classifer
         model = clf.fit(self.xTrain, self.yTrain)
