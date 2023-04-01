@@ -46,8 +46,8 @@ class data:
 
     def setSplits(self):
         x = self.getXTrainArray()
-        y = self.getYTrainArray().astype('int')
-        y=y.astype('int')
+        y = self.getYTrainArray()
+        y = y.astype('int')
         self.xTrain, self.xTest, self.yTrain, self.yTest = train_test_split(x, y, test_size=(1 - self.trainSize))
 
     def getXTrainArray(self):
