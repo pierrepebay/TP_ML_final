@@ -10,14 +10,14 @@ from sklearn import metrics
 import Data
 
 def main():
-    data = Data.data("data/xTrain.csv", "data/yTrain.csv", "data/xEval.csv", trainSize=0.95)
+    data = Data.data("data/xTrain.csv", "data/yTrain.csv", "data/xEval.csv", trainSize=0.8)
 
     data.classifyRandomForest(n_e=200, v=3)
 
     confusion_matrix = data.getConfusionMatrix()
     print(confusion_matrix)
     print("f1 score: ", data.getF1Score())
-    
+    metrics.roc_curve(data.yTest, data.yPred)
     # data.classifyAdaBoost(n_est=50)
     # print("AdaBoost Accuracy:",data.getModelAccuracy())
     # n_estimators = range(10, 200, 10)

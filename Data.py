@@ -13,6 +13,7 @@ from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler, ClusterCentroids, AllKNN
 
 class data:
     def __init__(self, xTrainPath, yTrainPath, xEvalPath, trainSize, data_augmentation=True):
@@ -21,12 +22,20 @@ class data:
         self.xEvalDataframe = pd.read_csv(xEvalPath, delimiter=",")
 
         self.allDataFrame = pd.concat([self.xTrainDataframe, self.yTrainDataframe], axis=1)
+        self.allDataFrame.drop('idCow', axis=1, inplace=True)
+
+        self.allDataFrame['data_hour'] = self.allDataFrame['data_hour'].apply(lambda date_str: pd.to_datetime(date_str).hour)
 
         self.m, self.n = self.xTrainDataframe.shape
 
         self.trainSize = trainSize
 
+        print("Removing erroneous lines...")
         self.removeErrorLines()
+        print("Normalizing time-location values...")
+        self.normalizeTimeValues()
+        self.allDataFrame.to_csv("normalizedXTrain.csv",index=False)
+        print("Setting train/test splits...")
         self.setSplits()
         
         if type(data_augmentation) == bool: 
@@ -39,22 +48,38 @@ class data:
         s, ns = np.count_nonzero(self.yTrain == 1), np.count_nonzero(self.yTrain == 0)
         print(f'{s} sick cows, {ns} non sick cows: BEFORE SMOTE')
         #imbalance = s // ns
-        self.xTrain, self.yTrain = SMOTE(sampling_strategy=imbalance_ratio).fit_resample(self.xTrain, self.yTrain)
+        self.xTrain, self.yTrain = SMOTE(sampling_strategy=0.2).fit_resample(self.xTrain, self.yTrain)
+        # self.xTrain, self.yTrain = ClusterCentroids(sampling_strategy=0.2).fit_resample(self.xTrain, self.yTrain) # ca prend beaucoup de temps a tourner
         s, ns = np.count_nonzero(self.yTrain == 1), np.count_nonzero(self.yTrain == 0)
         print(f'{s} sick cows, {ns} non sick cows: AFTER SMOTE')
-                
+
+    def normalizeTimeValues(self):
+        for index, row in self.allDataFrame.iterrows():
+            for i in range(0,24):
+                all_i = row[f"all{i}"]
+                rest_i = row[f"rest{i}"]
+                eat_i = row[f"eat{i}"]
+                norm_sum = all_i + rest_i + eat_i
+                new_all_i = all_i / norm_sum
+                new_rest_i = rest_i / norm_sum
+                new_eat_i = eat_i / norm_sum
+                self.allDataFrame.at[index,f"all{i}"] = new_all_i
+                self.allDataFrame.at[index,f"rest{i}"] = new_rest_i
+                self.allDataFrame.at[index,f"eat{i}"] = new_eat_i
 
     def setSplits(self):
         x = self.getXTrainArray()
         y = self.getYTrainArray()
         y = y.astype('int')
+        scaler = StandardScaler()
+        x = scaler.fit_transform(x)
         self.xTrain, self.xTest, self.yTrain, self.yTest = train_test_split(x, y, test_size=(1 - self.trainSize))
 
     def getXTrainArray(self):
-        return self.allDataFrame.to_numpy()[:,range(2,74)]
+        return self.allDataFrame.drop('y', axis=1).to_numpy()
     
     def getYTrainArray(self):
-        return self.allDataFrame.to_numpy()[:,74]
+        return self.allDataFrame['y'].to_numpy()
 
     def removeErrorLines(self):
         self.allDataFrame.dropna(inplace=True)
@@ -82,22 +107,26 @@ class data:
         self.yPred = model.predict(self.xTest)
     
     def classifyRandomForest(self, n_e, v, max_d=None, min_smp_splt=2):
+        print("*** Classifying with random forest...")
         clf = RandomForestClassifier(n_estimators = n_e, verbose=v, random_state=0, max_depth=max_d, min_samples_split=min_smp_splt)
 
         # Train Random Forest Classifer
-        model = clf.fit(self.xTrain, self.yTrain)
+        self.model = clf.fit(self.xTrain, self.yTrain)
 
         # Predict the response for test dataset
-        self.yPred = model.predict(self.xTest)
+        self.yPred = self.model.predict(self.xTest)
     
     def classifyKNeighbors(self):
-        neigh = KNeighborsClassifier()
+        def lorentzian_distance(x, y):
+            return metrics.pairwise.distance.minkowski(x, y, p=1)
+
+        neigh = KNeighborsClassifier(n_neighbors=3, metric=lorentzian_distance)
 
         # Train Random Forest Classifer
-        model = neigh.fit(self.xTrain, self.yTrain)
+        self.model = neigh.fit(self.xTrain, self.yTrain)
 
         # Predict the response for test dataset
-        self.yPred = model.predict(self.xTest)
+        self.yPred = self.model.predict(self.xTest)
     
     def classifyLinearSVC(self):
         clf = make_pipeline(StandardScaler(), LinearSVC(random_state=0, tol=1e-5))
