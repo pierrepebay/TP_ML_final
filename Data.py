@@ -3,11 +3,14 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import math
 
+from mpl_toolkits.mplot3d import Axes3D
+
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import LinearSVC
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 from sklearn import datasets
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
@@ -48,7 +51,7 @@ class data:
         s, ns = np.count_nonzero(self.yTrain == 1), np.count_nonzero(self.yTrain == 0)
         print(f'{s} sick cows, {ns} non sick cows: BEFORE SMOTE')
         #imbalance = s // ns
-        self.xTrain, self.yTrain = SMOTE(sampling_strategy=0.2).fit_resample(self.xTrain, self.yTrain)
+        self.xTrain, self.yTrain = SMOTE(sampling_strategy=imbalance_ratio).fit_resample(self.xTrain, self.yTrain)
         # self.xTrain, self.yTrain = ClusterCentroids(sampling_strategy=0.2).fit_resample(self.xTrain, self.yTrain) # ca prend beaucoup de temps a tourner
         s, ns = np.count_nonzero(self.yTrain == 1), np.count_nonzero(self.yTrain == 0)
         print(f'{s} sick cows, {ns} non sick cows: AFTER SMOTE')
@@ -73,6 +76,28 @@ class data:
         y = y.astype('int')
         scaler = StandardScaler()
         x = scaler.fit_transform(x)
+        n_components = 3  # Set the desired number of components (dimensions)
+        pca = PCA(n_components=n_components)
+        principal_components = pca.fit(x)
+        X_pca = pca.transform(x)
+        print(pca.explained_variance_ratio_)
+
+        # scatter plot pca result
+        principalDf = pd.DataFrame(data = X_pca, columns = ['principal component 1', 'principal component 2', 'principal component 3'])
+        print(principalDf)
+
+        finalDf = pd.concat([principalDf, pd.DataFrame(data=y,columns=['y'])], axis = 1)
+
+        fig = plt.figure(figsize = (10, 7))
+        ax = plt.axes(projection ="3d")
+        
+        # Creating plot
+        ax.scatter3D(finalDf['principal component 1'].to_numpy(),finalDf['principal component 2'].to_numpy(),finalDf['principal component 3'].to_numpy(),c=finalDf['y'], cmap = 'prism')
+        plt.title("simple 3D scatter plot")
+        
+        # show plot
+        plt.show()
+        
         self.xTrain, self.xTest, self.yTrain, self.yTest = train_test_split(x, y, test_size=(1 - self.trainSize))
 
     def getXTrainArray(self):
